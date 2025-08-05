@@ -1,100 +1,208 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+
+const COLORS = {
+  accent: "#fbbf24",
+  primary: "#2563eb",
+  secondary: "#f1f5f9",
+};
+
+const initialBoard = Array(9).fill("");
+
+const WIN_LINES = [
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 3, 6],
+  [1, 4, 7],
+  [2, 5, 8],
+  [0, 4, 8],
+  [2, 4, 6],
+];
+
+// PUBLIC_INTERFACE
+function getWinner(board: string[]): { winner: string | null; line: number[] | null } {
+  /*
+   Returns winner "X" or "O" and the line if found, else nulls.
+  */
+  for (const line of WIN_LINES) {
+    const [a, b, c] = line;
+    if (
+      board[a] &&
+      board[a] === board[b] &&
+      board[a] === board[c]
+    ) {
+      return { winner: board[a], line };
+    }
+  }
+  return { winner: null, line: null };
+}
+
+// PUBLIC_INTERFACE
+function getStatus({
+  board,
+  isXNext,
+  winner,
+}: {
+  board: string[];
+  isXNext: boolean;
+  winner: string | null;
+}) {
+  if (winner) return `Player "${winner}" wins!`;
+  if (!board.includes("")) return "It's a draw!";
+  return `Current Turn: Player "${isXNext ? "X" : "O"}"`;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [board, setBoard] = useState<string[]>([...initialBoard]);
+  const [isXNext, setIsXNext] = useState<boolean>(true);
+  const [score, setScore] = useState({ X: 0, O: 0 });
+  const [highlight, setHighlight] = useState<number[] | null>(null);
+  const { winner } = getWinner(board);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  // Show winner and highlight only at the end
+  const status = getStatus({ board, isXNext, winner });
+
+  function handleClick(idx: number) {
+    if (board[idx] || winner) return;
+    const nextBoard = board.slice();
+    nextBoard[idx] = isXNext ? "X" : "O";
+    setBoard(nextBoard);
+
+    const result = getWinner(nextBoard);
+    if (result.winner) {
+      setTimeout(() => {
+        setHighlight(result.line);
+        setScore((s) => ({ ...s, [result.winner as "X" | "O"]: s[result.winner as "X" | "O"] + 1 }));
+      }, 0);
+    } else if (!nextBoard.includes("")) {
+      setHighlight([]);
+    }
+    setIsXNext(!isXNext);
+  }
+
+  function handleReset() {
+    setBoard([...initialBoard]);
+    setHighlight(null);
+    setIsXNext(true);
+  }
+
+  // Responsive style helpers
+  function getCellClasses(idx: number) {
+    let classes =
+      "aspect-square w-16 sm:w-20 md:w-24 text-3xl sm:text-4xl md:text-5xl flex items-center justify-center cursor-pointer select-none border border-[1.5px] border-secondary font-semibold transition-colors duration-150 ease-in-out";
+    if (highlight && highlight.includes(idx)) {
+      classes += " bg-[#fbbf2433] shadow-inner outline outline-2 outline-accent";
+    } else if (board[idx]) {
+      classes += " text-primary";
+    } else {
+      classes += " hover:bg-secondary/80";
+    }
+    return classes;
+  }
+
+  return (
+    <div
+      className="min-h-screen flex flex-col justify-center items-center bg-white"
+      style={{ background: COLORS.secondary }}
+    >
+      <header className="w-full max-w-md flex flex-col items-center justify-center gap-4 pb-3">
+        <h1
+          className="text-3xl md:text-4xl font-bold mb-2 tracking-tight text-primary select-none"
+          style={{ color: COLORS.primary }}
+        >
+          Tic Tac Toe
+        </h1>
+        {/* Scoreboard */}
+        <div className="flex flex-row items-center justify-center gap-8 text-base mb-2">
+          <div
+            className="flex flex-col items-center"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <span
+              className="font-medium text-xl"
+              style={{ color: COLORS.primary }}
+            >
+              X
+            </span>
+            <span className="font-bold text-accent text-lg" style={{ color: COLORS.accent }}>
+              {score.X}
+            </span>
+          </div>
+          <div className="h-8 w-[2px] bg-primary/10 rounded"></div>
+          <div
+            className="flex flex-col items-center"
           >
-            Read our docs
-          </a>
+            <span
+              className="font-medium text-xl"
+              style={{ color: COLORS.primary }}
+            >
+              O
+            </span>
+            <span className="font-bold text-accent text-lg" style={{ color: COLORS.accent }}>
+              {score.O}
+            </span>
+          </div>
+        </div>
+        {/* Status */}
+        <div
+          className={`text-center px-2 py-1 rounded select-none transition-all duration-200
+            ${winner ? "bg-accent/10 text-accent font-semibold" : "bg-primary/10 text-primary"}
+          `}
+          style={
+            winner
+              ? { background: "#fbbf2420", color: COLORS.accent }
+              : { background: "#2563eb22", color: COLORS.primary }
+          }
+        >
+          {status}
+        </div>
+      </header>
+
+      {/* Main Board */}
+      <main
+        className="flex flex-col items-center justify-center grow max-w-md w-full"
+      >
+        <div
+          className="grid grid-cols-3 grid-rows-3 gap-2 sm:gap-3 p-2 bg-white rounded-xl shadow-md"
+          style={{
+            background: "#fff",
+            boxShadow: "0 2px 24px #0a203013",
+            border: `1.5px solid ${COLORS.secondary}`,
+          }}
+        >
+          {board.map((cell, idx) => (
+            <button
+              key={idx}
+              className={getCellClasses(idx)}
+              aria-label={`Cell ${idx + 1}`}
+              onClick={() => handleClick(idx)}
+              tabIndex={board[idx] || winner ? -1 : 0}
+              style={
+                highlight && highlight.includes(idx)
+                  ? { background: COLORS.accent + "33", outline: `2px solid ${COLORS.accent}` }
+                  : board[idx]
+                  ? { color: COLORS.primary }
+                  : undefined
+              }
+            >
+              {cell}
+            </button>
+          ))}
         </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+      {/* Footer */}
+      <footer
+        className="w-full flex flex-col items-center justify-center gap-4 py-6 mb-0"
+      >
+        <button
+          onClick={handleReset}
+          className="mt-1 px-7 py-2 rounded-full font-semibold bg-accent text-white text-base shadow transition hover:scale-105 hover:bg-[#e09e13] focus:outline-none focus:ring-2 focus:ring-accent/50"
+          style={{ background: COLORS.accent }}
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+          Reset Game
+        </button>
+        <span className="text-xs text-primary/70 select-none">A simple Tic Tac Toe game</span>
       </footer>
     </div>
   );
